@@ -384,8 +384,9 @@
 const SUBCATS={precious_metals:['Gold Ring','Gold Chain / Necklace','Silver Bracelet','Earrings','Watch (Luxury)','Diamond Pendant','Gemstone','Other Jewellery'],electronics:['Smartphone','Laptop','Tablet','Earbuds / Headphones','Smartwatch','Camera','Charger / Cable','Power Bank','Other Electronics'],clothing:['Shoes','Shirt','Pants / Trousers','Jacket / Coat','Hat / Cap','Scarf / Gloves','Dress','Sunglasses','Other Clothing'],bags:['Backpack','Handbag / Purse','Suitcase','Laptop Bag','Wallet','Pouch','Other Bag'],documents:['Passport','Driver\'s License','ID Card','Credit / Debit Card','Certificates','Other Document'],keys:['House Keys','Car Keys','Office Keys','Keychain','Other Keys'],sports:['Water Bottle','Sports Shoes','Yoga Mat','Bicycle Accessory','Racquet','Other Sports Item'],toys:['Action Figure','Board Game','Stuffed Toy','Puzzle','Other Toy'],other:['Umbrella','Book','Musical Instrument','Medicine','Pet Accessory','Other']};
 
 let mode='',db=loadDB(),photoDataURLs=[];
+let currentUploadToken = 0;
 function loadDB(){try{return JSON.parse(localStorage.getItem('lf_db'))||{lost:[],found:[],matches:[]};}catch{return{lost:[],found:[],matches:[]};}}
-function saveDB(){localStorage.setItem('lf_db',JSON.stringify(db));}
+function saveDB(){try{localStorage.setItem('lf_db',JSON.stringify(db));}catch(e){console.error(e);alert('Storage limit reached! Cannot save more reports.');}}
 const $=id=>document.getElementById(id);
 const screens={landing:$('screenLanding'),step1:$('screenStep1'),step2:$('screenStep2'),confirm:$('screenConfirm'),admin:$('screenAdmin')};
 function showScreen(n){Object.values(screens).forEach(s=>s.classList.remove('active'));screens[n].classList.add('active');$('mainContainer').style.maxWidth=n==='admin'?'960px':'680px';window.scrollTo({top:0,behavior:'smooth'});}
@@ -632,19 +633,37 @@ uploadArea.ondragleave=()=>uploadArea.style.borderColor='';
 uploadArea.ondrop=e=>{e.preventDefault();uploadArea.style.borderColor='';handleFiles(e.dataTransfer.files);};
 photoInput.onchange=()=>handleFiles(photoInput.files);
 
+function compressImg(dataUrl){
+  return new Promise(res=>{
+    const i=new Image();
+    i.onload=()=>{
+      let w=i.width,h=i.height,m=800;
+      if(w>m){h=Math.round(h*m/w);w=m;}if(h>m){w=Math.round(w*m/h);h=m;}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(i,0,0,w,h);
+      res(c.toDataURL('image/jpeg',0.7));
+    };
+    i.onerror=()=>res(dataUrl);i.src=dataUrl;
+  });
+}
+
 function handleFiles(files){
   preview.innerHTML='';photoDataURLs=[];$('aiImageDesc').innerHTML='';
+  const myToken = ++currentUploadToken;
   [...files].forEach(f=>{
     if(!f.type.startsWith('image/'))return;
     const r=new FileReader();
     r.onload=async e=>{
-      photoDataURLs.push(e.target.result);
-      const img=document.createElement('img');img.src=e.target.result;preview.appendChild(img);
+      const comp = await compressImg(e.target.result);
+      if(myToken !== currentUploadToken) return;
+      photoDataURLs.push(comp);
+      const img=document.createElement('img');img.src=comp;preview.appendChild(img);
 
       // Auto-describe with Gemini
       if(hasApiKey()&&photoDataURLs.length===1){
         $('aiImageDesc').innerHTML='<div class="ai-desc"><strong>🤖 Gemini AI</strong>Analyzing image…</div>';
-        const desc = await geminiDescribeImage(e.target.result);
+        const desc = await geminiDescribeImage(comp);
+        if(myToken !== currentUploadToken) return;
         if(desc) $('aiImageDesc').innerHTML=`<div class="ai-desc"><strong>🤖 Gemini AI Description</strong>${desc}</div>`;
         else $('aiImageDesc').innerHTML='';
       }
@@ -676,7 +695,7 @@ $('submitBtn').onclick=async()=>{
   });
 };
 
-function resetForm(){$('category').selectedIndex=0;$('subcategoryGroup').style.display='none';$('colour').value='';$('description').value='';$('idMarks').value='';$('contactName').value='';$('contactEmail').value='';photoInput.value='';preview.innerHTML='';photoDataURLs=[];$('toStep2').disabled=true;$('aiImageDesc').innerHTML='';}
+function resetForm(){currentUploadToken++;$('category').selectedIndex=0;$('subcategoryGroup').style.display='none';$('colour').value='';$('description').value='';$('idMarks').value='';$('contactName').value='';$('contactEmail').value='';photoInput.value='';preview.innerHTML='';photoDataURLs=[];$('toStep2').disabled=true;$('aiImageDesc').innerHTML='';}
 
 /* ═══════════════════════════════════════════
    ADMIN
