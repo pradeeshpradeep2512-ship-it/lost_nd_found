@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lost & Found Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue-50:  #eff6ff; --blue-100: #dbeafe; --blue-200: #bfdbfe;
+      --blue-300: #93c5fd; --blue-400: #60a5fa; --blue-500: #3b82f6;
+      --blue-600: #2563eb; --blue-700: #1d4ed8; --blue-800: #1e40af;
+      --blue-900: #1e3a8a;
+      --white: #ffffff;
+      --gray-50: #f8fafc; --gray-100: #f1f5f9; --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1; --gray-400: #94a3b8; --gray-500: #64748b;
+      --gray-700: #334155; --gray-900: #0f172a;
+      --green-100: #dcfce7; --green-500: #22c55e; --green-700: #15803d;
+      --red-100: #fee2e2; --red-500: #ef4444; --red-700: #b91c1c;
+      --amber-100: #fef3c7; --amber-500: #f59e0b; --amber-700: #b45309;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: linear-gradient(135deg, var(--blue-50) 0%, var(--white) 50%, var(--blue-50) 100%);
+      color: var(--gray-900);
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    /* ── Navbar ── */
+    .navbar {
+      width: 100%; background: var(--white);
+      border-bottom: 1px solid var(--blue-100);
+      padding: 16px 0; position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 1px 8px rgba(30,58,138,.05);
+    }
+    .navbar-inner {
+      max-width: 960px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .navbar .logo {
+      width: 36px; height: 36px; background: var(--blue-600);
+      border-radius: 10px; display: grid; place-items: center; cursor: pointer;
+      user-select: none;
+    }
+    .navbar .logo svg { width: 20px; height: 20px; fill: var(--white); }
+    .navbar h1 { font-size: 1.2rem; font-weight: 700; color: var(--blue-800); letter-spacing: -.02em; }
+    .navbar h1 span { color: var(--blue-500); }
+    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .nav-home-btn {
+      background: none; border: none; cursor: pointer; padding: 6px;
+      border-radius: 8px; display: grid; place-items: center;
+      transition: background .2s;
+    }
+    .nav-home-btn:hover { background: var(--blue-50); }
+    .nav-home-btn svg { width: 22px; height: 22px; fill: var(--blue-500); }
+
+    /* ── Container ── */
+    .container { width: 100%; max-width: 680px; padding: 40px 24px 80px; }
+
+    /* ── Screens ── */
+    .screen { display: none; animation: fadeUp .4s ease both; }
+    .screen.active { display: block; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── Landing ── */
+    .landing-title {
+      text-align: center; font-size: 2rem; font-weight: 800;
+      color: var(--blue-900); margin-bottom: 8px;
+    }
+    .landing-sub {
+      text-align: center; color: var(--gray-500); margin-bottom: 40px;
+      font-size: .95rem; line-height: 1.5;
+    }
+    .mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .mode-card {
+      background: var(--white); border: 2px solid var(--blue-100);
+      border-radius: 16px; padding: 36px 24px; text-align: center;
+      cursor: pointer; transition: border-color .2s, box-shadow .2s, transform .15s;
+    }
+    .mode-card:hover {
+      border-color: var(--blue-400);
+      box-shadow: 0 8px 32px rgba(37,99,235,.12);
+      transform: translateY(-2px);
+    }
+    .mode-card .icon {
+      width: 64px; height: 64px; border-radius: 50%;
+      display: grid; place-items: center; margin: 0 auto 16px;
+    }
+    .mode-card .icon svg { width: 32px; height: 32px; }
+    .mode-card.lost .icon { background: var(--red-100); }
+    .mode-card.lost .icon svg { fill: var(--red-500); }
+    .mode-card.found .icon { background: var(--green-100); }
+    .mode-card.found .icon svg { fill: var(--green-500); }
+    .mode-card h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 6px; }
+    .mode-card.lost h3 { color: var(--red-700); }
+    .mode-card.found h3 { color: var(--green-700); }
+    .mode-card p { font-size: .85rem; color: var(--gray-500); line-height: 1.4; }
+
+    /* ── Progress ── */
+    .progress-bar { display: flex; gap: 8px; margin-bottom: 36px; }
+    .progress-bar .dot { flex:1; height:5px; border-radius:99px; background:var(--blue-100); transition:background .3s; }
+    .progress-bar .dot.filled { background: var(--blue-500); }
+
+    /* ── Headings ── */
+    .step-badge {
+      display: inline-block; padding: 4px 12px; border-radius: 99px;
+      font-size: .75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; margin-bottom: 12px;
+    }
+    .step-badge.lost { background: var(--red-100); color: var(--red-700); }
+    .step-badge.found { background: var(--green-100); color: var(--green-700); }
+    .step-title { font-size: 1.5rem; font-weight: 700; color: var(--blue-900); margin-bottom: 6px; }
+    .step-subtitle { font-size: .92rem; color: var(--gray-500); margin-bottom: 32px; line-height: 1.5; }
+
+    /* ── Form ── */
+    label.field-label {
+      display: block; font-size: .8rem; font-weight: 600; color: var(--blue-800);
+      margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em;
+    }
+    .optional-tag { font-weight:400; color:var(--gray-400); text-transform:none; letter-spacing:0; font-size:.78rem; }
+    .field-group { margin-bottom: 24px; }
+
+    input[type="text"], input[type="email"], input[type="tel"], textarea, select {
+      width: 100%; padding: 14px 16px; font-size: .95rem; font-family: inherit;
+      border: 2px solid var(--blue-100); border-radius: var(--radius);
+      background: var(--white); color: var(--gray-900);
+      transition: border-color .2s, box-shadow .2s; outline: none;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--blue-400); box-shadow: 0 0 0 4px rgba(59,130,246,.12);
+    }
+    textarea { resize: vertical; min-height: 90px; }
+    select {
+      appearance: none; cursor: pointer; padding-right: 40px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6l3.5 4 3.5-4z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center;
+    }
+
+    /* ── File upload ── */
+    .file-upload-area {
+      border: 2px dashed var(--blue-200); border-radius: var(--radius);
+      padding: 28px; text-align: center; cursor: pointer;
+      transition: background .2s, border-color .2s; background: var(--blue-50);
+    }
+    .file-upload-area:hover { border-color: var(--blue-400); background: var(--blue-100); }
+    .file-upload-area svg { width: 32px; height: 32px; fill: var(--blue-400); margin-bottom: 6px; }
+    .file-upload-area p { font-size: .85rem; color: var(--gray-500); }
+    .file-upload-area .browse { color: var(--blue-600); font-weight: 600; text-decoration: underline; }
+    .file-upload-area input[type="file"] { display: none; }
+    .file-preview { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .file-preview img { width: 68px; height: 68px; object-fit: cover; border-radius: 8px; border: 2px solid var(--blue-200); }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      font-family: inherit; font-size: .95rem; font-weight: 600;
+      padding: 14px 28px; border: none; border-radius: var(--radius);
+      cursor: pointer; transition: background .2s, transform .1s, box-shadow .2s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--blue-600); color: var(--white); box-shadow: 0 4px 14px rgba(37,99,235,.25); }
+    .btn-primary:hover { background: var(--blue-700); }
+    .btn-primary:disabled { background: var(--blue-200); color: var(--blue-400); cursor: not-allowed; box-shadow: none; }
+    .btn-secondary { background: var(--blue-50); color: var(--blue-700); border: 2px solid var(--blue-200); }
+    .btn-secondary:hover { background: var(--blue-100); }
+    .btn-sm { padding: 8px 16px; font-size: .82rem; border-radius: 8px; }
+    .btn-green { background: var(--green-500); color: var(--white); }
+    .btn-green:hover { background: var(--green-700); }
+    .btn-red { background: var(--red-500); color: var(--white); }
+    .btn-red:hover { background: var(--red-700); }
+    .btn-amber { background: var(--amber-500); color: var(--white); }
+    .btn-amber:hover { background: var(--amber-700); }
+    .btn-row { display: flex; gap: 12px; margin-top: 32px; }
+
+    /* ── Confirm card ── */
+    .confirm-card { text-align: center; padding: 48px 24px; }
+    .confirm-icon {
+      width: 88px; height: 88px; background: var(--blue-100);
+      border-radius: 50%; display: grid; place-items: center; margin: 0 auto 24px;
+    }
+    .confirm-icon svg { width: 44px; height: 44px; fill: var(--blue-600); }
+    .confirm-card h2 { font-size: 1.4rem; font-weight: 700; color: var(--blue-900); margin-bottom: 12px; }
+    .confirm-card p { color: var(--gray-500); line-height: 1.6; max-width: 440px; margin: 0 auto; }
+    .confirm-card .ref-id {
+      display: inline-block; margin-top: 20px; padding: 8px 20px;
+      background: var(--blue-50); border: 1px solid var(--blue-200);
+      border-radius: 8px; font-weight: 600; color: var(--blue-700); font-size: .88rem;
+    }
+
+    /* ── Loading ── */
+    .loading-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(255,255,255,.92); backdrop-filter: blur(8px);
+      z-index: 200; flex-direction: column; align-items: center; justify-content: center;
+      animation: fadeIn .3s ease;
+    }
+    .loading-overlay.visible { display: flex; }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    .spinner {
+      width: 48px; height: 48px; border: 4px solid var(--blue-100);
+      border-top-color: var(--blue-500); border-radius: 50%;
+      animation: spin .8s linear infinite; margin-bottom: 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-overlay .msg { font-size: 1.3rem; font-weight: 700; color: var(--blue-700); }
+    .loading-overlay .msg span { animation: pulse 1.6s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:.55;} 50%{opacity:1;} }
+    .loading-overlay .sub-msg { font-size: .85rem; color: var(--gray-400); margin-top: 6px; }
+
+    /* ══════════════════════════════════════
+       ADMIN PANEL
+    ══════════════════════════════════════ */
+    .admin-panel { max-width: 960px; }
+    .admin-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+    .admin-header h2 { font-size: 1.4rem; font-weight: 700; color: var(--blue-900); }
+    .admin-tabs { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
+    .admin-tab {
+      padding: 8px 18px; border-radius: 99px; font-size: .82rem;
+      font-weight: 600; border: 2px solid var(--blue-100); background: var(--white);
+      color: var(--gray-500); cursor: pointer; transition: all .2s;
+    }
+    .admin-tab:hover { border-color: var(--blue-300); }
+    .admin-tab.active { background: var(--blue-600); color: var(--white); border-color: var(--blue-600); }
+    .admin-stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+      gap: 12px; margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--white); border: 1px solid var(--blue-100);
+      border-radius: 12px; padding: 16px; text-align: center;
+    }
+    .stat-card .num { font-size: 1.6rem; font-weight: 800; color: var(--blue-700); }
+    .stat-card .lbl { font-size: .75rem; color: var(--gray-400); margin-top: 2px; text-transform: uppercase; letter-spacing: .04em; }
+
+    /* ── Match cards ── */
+    .match-section-title {
+      font-size: .9rem; font-weight: 700; color: var(--blue-800);
+      text-transform: uppercase; letter-spacing: .04em; margin-bottom: 14px;
+      padding-bottom: 8px; border-bottom: 2px solid var(--blue-100);
+    }
+    .match-card {
+      background: var(--white); border: 1px solid var(--blue-100);
+      border-radius: 14px; padding: 20px; margin-bottom: 16px;
+      box-shadow: 0 2px 12px rgba(30,58,138,.04);
+      transition: box-shadow .2s;
+    }
+    .match-card:hover { box-shadow: 0 4px 20px rgba(30,58,138,.1); }
+    .match-pair { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: start; }
+    .match-item { padding: 14px; border-radius: 10px; }
+    .match-item.lost-item { background: var(--red-100); }
+    .match-item.found-item { background: var(--green-100); }
+    .match-item .tag {
+      font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; margin-bottom: 6px;
+    }
+    .match-item.lost-item .tag { color: var(--red-700); }
+    .match-item.found-item .tag { color: var(--green-700); }
+    .match-item h4 { font-size: .92rem; font-weight: 600; color: var(--gray-900); margin-bottom: 4px; }
+    .match-item p { font-size: .8rem; color: var(--gray-700); line-height: 1.4; }
+    .match-item .meta { font-size: .75rem; color: var(--gray-400); margin-top: 6px; }
+    .match-item .photos { display: flex; gap: 4px; margin-top: 8px; }
+    .match-item .photos img { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(0,0,0,.08); }
+    .match-arrow {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 6px;
+    }
+    .match-arrow svg { width: 28px; height: 28px; fill: var(--blue-400); }
+    .match-score {
+      font-size: .78rem; font-weight: 700; padding: 4px 10px;
+      border-radius: 99px; white-space: nowrap;
+    }
+    .score-high { background: var(--green-100); color: var(--green-700); }
+    .score-med  { background: var(--amber-100); color: var(--amber-700); }
+    .score-low  { background: var(--red-100); color: var(--red-700); }
+    .match-actions { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+
+    /* ── Report list (admin) ── */
+    .report-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    .report-table th {
+      text-align: left; padding: 10px 12px; font-size: .75rem;
+      text-transform: uppercase; letter-spacing: .04em; color: var(--gray-400);
+      border-bottom: 2px solid var(--blue-100);
+    }
+    .report-table td { padding: 10px 12px; border-bottom: 1px solid var(--gray-100); vertical-align: top; }
+    .report-table .type-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 99px;
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+    }
+    .type-badge.lost { background: var(--red-100); color: var(--red-700); }
+    .type-badge.found { background: var(--green-100); color: var(--green-700); }
+
+    .empty-state {
+      text-align: center; padding: 48px 24px; color: var(--gray-400);
+    }
+    .empty-state svg { width: 56px; height: 56px; fill: var(--blue-200); margin-bottom: 12px; }
+    .empty-state h3 { color: var(--gray-500); font-size: 1rem; margin-bottom: 4px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .mode-cards { grid-template-columns: 1fr; }
+      .match-pair { grid-template-columns: 1fr; }
+      .match-arrow { flex-direction: row; padding: 8px 0; }
+      .match-arrow svg { transform: rotate(90deg); }
+      .btn-row { flex-direction: column; }
+      .btn-row .btn { width: 100%; }
+      .admin-stats { grid-template-columns: 1fr 1fr; }
+      .report-table { font-size: .78rem; }
+      .container { padding: 24px 16px 60px; }
+      .landing-title { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navbar ── -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <div class="logo" id="logoBtn" title="Triple-click for admin">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+    </div>
+    <h1>Lost<span>&</span>Found Assistant</h1>
+    <div class="nav-right">
+      <button class="nav-home-btn" id="navHomeBtn" title="Home">
+        <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Loading overlay ── -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="msg"><span>We got you</span></div>
+  <div class="sub-msg" id="loadingSubMsg">Matching your item with our records…</div>
+</div>
+
+<div class="container" id="mainContainer">
+
+  <!-- ═══════════ LANDING ═══════════ -->
+  <div class="screen active" id="screenLanding">
+    <h2 class="landing-title">What would you like to report?</h2>
+    <p class="landing-sub">Whether you've lost something or found an item, we'll help connect the dots.</p>
+    <div class="mode-cards">
+      <div class="mode-card lost" id="pickLost">
+        <div class="icon">
+          <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        </div>
+        <h3>I Lost Something</h3>
+        <p>Report a missing item and we'll try to find a match in our database.</p>
+      </div>
+      <div class="mode-card found" id="pickFound">
+        <div class="icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        </div>
+        <h3>I Found Something</h3>
+        <p>Register a found item so its owner can reclaim it.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ FORM STEP 1 — Item details ═══════════ -->
+  <div class="screen" id="screenStep1">
+    <div class="progress-bar"><div class="dot filled"></div><div class="dot"></div><div class="dot"></div></div>
+    <span class="step-badge" id="badge1">LOST</span>
+    <h2 class="step-title" id="title1">Describe your lost item</h2>
+    <p class="step-subtitle" id="sub1">Fill in the details below and we'll search our records for a match.</p>
+
+    <div class="field-group">
+      <label class="field-label" for="category">Product Category</label>
+      <select id="category"><option value="" disabled selected>Select a category…</option>
+        <option value="precious_metals">Precious Metals & Jewellery</option>
+        <option value="electronics">Electronics</option>
+        <option value="clothing">Clothing & Accessories</option>
+        <option value="bags">Bags & Luggage</option>
+        <option value="documents">Documents & IDs</option>
+        <option value="keys">Keys & Keychains</option>
+        <option value="sports">Sports & Fitness</option>
+        <option value="toys">Toys & Games</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="field-group" id="subcategoryGroup" style="display:none;">
+      <label class="field-label" for="subcategory">Item Type</label>
+      <select id="subcategory"><option value="" disabled selected>Select item type…</option></select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="colour">Product Colour</label>
+      <input type="text" id="colour" placeholder="e.g. Black, Silver, Red…" />
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="description">Description</label>
+      <textarea id="description" placeholder="Brand, size, model, distinguishing features…"></textarea>
+    </div>
+    <div class="btn-row" style="justify-content:space-between;">
+      <button class="btn btn-secondary" id="backToLanding">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M14 7l-5 5 5 5V7z"/></svg> Back
+      </button>
+      <button class="btn btn-primary" id="toStep2" disabled>
+        Continue <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5v10z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════ FORM STEP 2 — Optional extras ═══════════ -->
+  <div class="screen" id="screenStep2">
+    <div class="progress-bar"><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div></div>
+    <span class="step-badge" id="badge2">LOST</span>
+    <h2 class="step-title">Any extra details?</h2>
+    <p class="step-subtitle">These are optional but can greatly improve matching accuracy.</p>
+
+    <div class="field-group">
+      <label class="field-label" for="idMarks">Identification Marks <span class="optional-tag">(optional)</span></label>
+      <textarea id="idMarks" placeholder="Scratches, engravings, stickers, dents, custom markings…"></textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label" id="photoLabel">Photos of the Product <span class="optional-tag" id="photoOptTag">(optional)</span></label>
+      <div class="file-upload-area" id="uploadArea">
+        <svg viewBox="0 0 24 24"><path d="M19.35 10.04A7.49 7.49 0 0012 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 000 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+        <p>Drag & drop images here or <span class="browse">browse</span></p>
+        <input type="file" id="photoInput" accept="image/*" multiple />
+      </div>
+      <div class="file-preview" id="filePreview"></div>
+    </div>
+
+    <!-- Contact (for found items we'll need contact too) -->
+    <div class="field-group">
+      <label class="field-label" for="contactName">Your Name <span class="optional-tag">(optional)</span></label>
+      <input type="text" id="contactName" placeholder="Full name" />
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="contactEmail">Email or Phone <span class="optional-tag">(optional)</span></label>
+      <input type="text" id="contactEmail" placeholder="email@example.com or phone number" />
+    </div>
+
+    <div class="btn-row" style="justify-content:space-between;">
+      <button class="btn btn-secondary" id="backToStep1">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M14 7l-5 5 5 5V7z"/></svg> Back
+      </button>
+      <button class="btn btn-primary" id="submitBtn">
+        Submit Report <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════ CONFIRMATION ═══════════ -->
+  <div class="screen" id="screenConfirm">
+    <div class="progress-bar"><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div></div>
+    <div class="confirm-card">
+      <div class="confirm-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+      </div>
+      <h2 id="confirmTitle">Report Submitted!</h2>
+      <p id="confirmMsg">We've recorded your lost item details. <strong>We will contact you as soon as your item is found.</strong></p>
+      <div class="ref-id" id="refId">REF-000000</div>
+      <div class="btn-row" style="justify-content:center; margin-top:28px;">
+        <button class="btn btn-primary" id="newReport">Report Another Item</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ ADMIN PANEL ═══════════ -->
+  <div class="screen admin-panel" id="screenAdmin">
+    <div class="admin-header">
+      <h2>🔒 Admin Panel</h2>
+      <button class="btn btn-secondary btn-sm" id="adminRunMatch" title="Run AI Matching">
+        ⚡ Run AI Match
+      </button>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="matches">AI Matches</button>
+      <button class="admin-tab" data-tab="lost">Lost Reports</button>
+      <button class="admin-tab" data-tab="found">Found Reports</button>
+    </div>
+
+    <div class="admin-stats" id="adminStats"></div>
+
+    <!-- Tab content -->
+    <div id="tabMatches"></div>
+    <div id="tabLost" style="display:none;"></div>
+    <div id="tabFound" style="display:none;"></div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+/* ═══════════════════════════════════════════
+   DATA & STATE
+═══════════════════════════════════════════ */
+const SUBCATS = {
+  precious_metals: ['Gold Ring','Gold Chain / Necklace','Silver Bracelet','Earrings','Watch (Luxury)','Diamond Pendant','Gemstone','Other Jewellery'],
+  electronics: ['Smartphone','Laptop','Tablet','Earbuds / Headphones','Smartwatch','Camera','Charger / Cable','Power Bank','Other Electronics'],
+  clothing: ['Shoes','Shirt','Pants / Trousers','Jacket / Coat','Hat / Cap','Scarf / Gloves','Dress','Sunglasses','Other Clothing'],
+  bags: ['Backpack','Handbag / Purse','Suitcase','Laptop Bag','Wallet','Pouch','Other Bag'],
+  documents: ['Passport','Driver\'s License','ID Card','Credit / Debit Card','Certificates','Other Document'],
+  keys: ['House Keys','Car Keys','Office Keys','Keychain','Other Keys'],
+  sports: ['Water Bottle','Sports Shoes','Yoga Mat','Bicycle Accessory','Racquet','Other Sports Item'],
+  toys: ['Action Figure','Board Game','Stuffed Toy','Puzzle','Other Toy'],
+  other: ['Umbrella','Book','Musical Instrument','Medicine','Pet Accessory','Other'],
+};
+
+let mode = ''; // 'lost' or 'found'
+let db = loadDB();
+let photoDataURLs = [];
+
+function loadDB() {
+  try { return JSON.parse(localStorage.getItem('lf_db')) || { lost:[], found:[], matches:[] }; }
+  catch { return { lost:[], found:[], matches:[] }; }
+}
+function saveDB() { localStorage.setItem('lf_db', JSON.stringify(db)); }
+
+/* ═══════════════════════════════════════════
+   DOM REFS
+═══════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const screens = {
+  landing: $('screenLanding'), step1: $('screenStep1'),
+  step2: $('screenStep2'), confirm: $('screenConfirm'), admin: $('screenAdmin'),
+};
+
+function showScreen(name) {
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  screens[name].classList.add('active');
+  if (name === 'admin') $('mainContainer').style.maxWidth = '960px';
+  else $('mainContainer').style.maxWidth = '680px';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showLoading(msg, sub, cb) {
+  $('loadingOverlay').querySelector('.msg span').textContent = msg;
+  $('loadingSubMsg').textContent = sub;
+  $('loadingOverlay').classList.add('visible');
+  setTimeout(() => { $('loadingOverlay').classList.remove('visible'); cb(); }, 2000);
+}
+
+/* ═══════════════════════════════════════════
+   LANDING — pick mode
+═══════════════════════════════════════════ */
+$('pickLost').addEventListener('click', () => { mode = 'lost'; setupForm(); showScreen('step1'); });
+$('pickFound').addEventListener('click', () => { mode = 'found'; setupForm(); showScreen('step1'); });
+
+function setupForm() {
+  const isLost = mode === 'lost';
+  $('badge1').textContent = isLost ? 'LOST' : 'FOUND';
+  $('badge1').className = 'step-badge ' + mode;
+  $('badge2').textContent = isLost ? 'LOST' : 'FOUND';
+  $('badge2').className = 'step-badge ' + mode;
+  $('title1').textContent = isLost ? 'Describe your lost item' : 'Describe the item you found';
+  $('sub1').textContent = isLost
+    ? 'Fill in the details below and we\'ll search our records for a match.'
+    : 'Enter the item details so we can match it with someone who lost it.';
+  $('photoOptTag').textContent = isLost ? '(optional)' : '(recommended)';
+  resetForm();
+}
+
+/* ═══════════════════════════════════════════
+   CATEGORY / SUBCATEGORY
+═══════════════════════════════════════════ */
+$('category').addEventListener('change', () => {
+  const items = SUBCATS[$('category').value];
+  if (items) {
+    $('subcategory').innerHTML = '<option value="" disabled selected>Select item type…</option>';
+    items.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; $('subcategory').appendChild(o); });
+    $('subcategoryGroup').style.display = '';
+  } else { $('subcategoryGroup').style.display = 'none'; }
+  validate1();
+});
+$('subcategory').addEventListener('change', validate1);
+$('colour').addEventListener('input', validate1);
+$('description').addEventListener('input', validate1);
+
+function validate1() {
+  $('toStep2').disabled = !($('category').value && $('subcategory').value && $('colour').value.trim() && $('description').value.trim());
+}
+
+/* ═══════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════ */
+$('backToLanding').addEventListener('click', () => showScreen('landing'));
+$('toStep2').addEventListener('click', () => showLoading('We got you', 'Preparing next step…', () => showScreen('step2')));
+$('backToStep1').addEventListener('click', () => showScreen('step1'));
+$('navHomeBtn').addEventListener('click', () => { resetForm(); showScreen('landing'); });
+$('newReport').addEventListener('click', () => { resetForm(); showScreen('landing'); });
+
+/* ═══════════════════════════════════════════
+   FILE UPLOAD
+═══════════════════════════════════════════ */
+const uploadArea = $('uploadArea'), photoInput = $('photoInput'), preview = $('filePreview');
+uploadArea.addEventListener('click', () => photoInput.click());
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.borderColor='var(--blue-400)'; });
+uploadArea.addEventListener('dragleave', () => uploadArea.style.borderColor='');
+uploadArea.addEventListener('drop', e => { e.preventDefault(); uploadArea.style.borderColor=''; handleFiles(e.dataTransfer.files); });
+photoInput.addEventListener('change', () => handleFiles(photoInput.files));
+
+function handleFiles(files) {
+  preview.innerHTML = '';
+  photoDataURLs = [];
+  [...files].forEach(f => {
+    if (!f.type.startsWith('image/')) return;
+    const r = new FileReader();
+    r.onload = e => { photoDataURLs.push(e.target.result); const img = document.createElement('img'); img.src = e.target.result; preview.appendChild(img); };
+    r.readAsDataURL(f);
+  });
+}
+
+/* ═══════════════════════════════════════════
+   SUBMIT
+═══════════════════════════════════════════ */
+$('submitBtn').addEventListener('click', () => {
+  const ref = 'REF-' + Math.random().toString(36).substring(2,8).toUpperCase();
+  const record = {
+    id: ref,
+    type: mode,
+    category: $('category').value,
+    subcategory: $('subcategory').value,
+    colour: $('colour').value.trim(),
+    description: $('description').value.trim(),
+    idMarks: $('idMarks').value.trim(),
+    photos: [...photoDataURLs],
+    contactName: $('contactName').value.trim(),
+    contactEmail: $('contactEmail').value.trim(),
+    date: new Date().toISOString(),
+  };
+  db[mode].push(record);
+
+  // Auto-run AI matching when a new report is submitted
+  runAIMatching();
+  saveDB();
+
+  // Set confirmation text
+  if (mode === 'lost') {
+    $('confirmTitle').textContent = 'Report Submitted!';
+    $('confirmMsg').innerHTML = 'We\'ve recorded your lost item details and are actively matching it against our database. <strong>We will contact you as soon as your item is found.</strong>';
+  } else {
+    $('confirmTitle').textContent = 'Thank You!';
+    $('confirmMsg').innerHTML = 'The found item has been registered. <strong>We will reach out to the owner once a match is confirmed.</strong>';
+  }
+  $('refId').textContent = ref;
+
+  showLoading('We got you', mode === 'lost' ? 'Searching for matches…' : 'Registering found item…', () => showScreen('confirm'));
+});
+
+function resetForm() {
+  $('category').selectedIndex = 0;
+  $('subcategoryGroup').style.display = 'none';
+  $('colour').value = '';
+  $('description').value = '';
+  $('idMarks').value = '';
+  $('contactName').value = '';
+  $('contactEmail').value = '';
+  photoInput.value = '';
+  preview.innerHTML = '';
+  photoDataURLs = [];
+  $('toStep2').disabled = true;
+}
+
+/* ═══════════════════════════════════════════
+   ADMIN ACCESS — triple-click logo
+═══════════════════════════════════════════ */
+let logoClicks = 0, logoTimer = null;
+$('logoBtn').addEventListener('click', () => {
+  logoClicks++;
+  clearTimeout(logoTimer);
+  logoTimer = setTimeout(() => { logoClicks = 0; }, 600);
+  if (logoClicks >= 3) { logoClicks = 0; openAdmin(); }
+});
+// Also allow ?admin in URL
+if (new URLSearchParams(location.search).has('admin')) openAdmin();
+
+function openAdmin() {
+  showLoading('We got you', 'Loading admin panel…', () => { renderAdmin(); showScreen('admin'); });
+}
+
+/* ═══════════════════════════════════════════
+   AI MATCHING ENGINE
+   Cosine-ish similarity on category + subcategory + colour + description tokens
+═══════════════════════════════════════════ */
+function tokenize(str) {
+  return (str || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').split(/\s+/).filter(Boolean);
+}
+
+function jaccardSimilarity(a, b) {
+  const setA = new Set(a), setB = new Set(b);
+  const inter = [...setA].filter(x => setB.has(x)).length;
+  const union = new Set([...setA, ...setB]).size;
+  return union === 0 ? 0 : inter / union;
+}
+
+function scoreMatch(lost, found) {
+  let score = 0;
+  // Category exact match (30%)
+  if (lost.category === found.category) score += 30;
+  // Subcategory similarity (25%)
+  const subSim = jaccardSimilarity(tokenize(lost.subcategory), tokenize(found.subcategory));
+  score += subSim * 25;
+  // Colour match (20%)
+  const colSim = jaccardSimilarity(tokenize(lost.colour), tokenize(found.colour));
+  score += colSim * 20;
+  // Description similarity (15%)
+  const descSim = jaccardSimilarity(tokenize(lost.description), tokenize(found.description));
+  score += descSim * 15;
+  // ID Marks bonus (10%)
+  if (lost.idMarks && found.idMarks) {
+    const idSim = jaccardSimilarity(tokenize(lost.idMarks), tokenize(found.idMarks));
+    score += idSim * 10;
+  }
+  return Math.round(score);
+}
+
+function runAIMatching() {
+  const newMatches = [];
+  const approvedIds = new Set(db.matches.filter(m => m.status === 'approved').map(m => m.lostId + ':' + m.foundId));
+  const rejectedIds = new Set(db.matches.filter(m => m.status === 'rejected').map(m => m.lostId + ':' + m.foundId));
+
+  db.lost.forEach(l => {
+    db.found.forEach(f => {
+      const key = l.id + ':' + f.id;
+      if (approvedIds.has(key) || rejectedIds.has(key)) return;
+      const s = scoreMatch(l, f);
+      if (s >= 20) {
+        newMatches.push({ lostId: l.id, foundId: f.id, score: s, status: 'pending', date: new Date().toISOString() });
+      }
+    });
+  });
+
+  // Merge, avoiding duplicates
+  const existingKeys = new Set(db.matches.map(m => m.lostId + ':' + m.foundId));
+  newMatches.forEach(m => {
+    if (!existingKeys.has(m.lostId + ':' + m.foundId)) db.matches.push(m);
+  });
+  saveDB();
+}
+
+/* ═══════════════════════════════════════════
+   ADMIN RENDER
+═══════════════════════════════════════════ */
+function renderAdmin() {
+  db = loadDB();
+
+  // Stats
+  const pending = db.matches.filter(m => m.status === 'pending').length;
+  const approved = db.matches.filter(m => m.status === 'approved').length;
+  $('adminStats').innerHTML = `
+    <div class="stat-card"><div class="num">${db.lost.length}</div><div class="lbl">Lost Reports</div></div>
+    <div class="stat-card"><div class="num">${db.found.length}</div><div class="lbl">Found Reports</div></div>
+    <div class="stat-card"><div class="num">${pending}</div><div class="lbl">Pending Matches</div></div>
+    <div class="stat-card"><div class="num">${approved}</div><div class="lbl">Approved</div></div>
+  `;
+
+  renderMatchesTab();
+  renderReportsTab('lost');
+  renderReportsTab('found');
+}
+
+function renderMatchesTab() {
+  const pendingMatches = db.matches.filter(m => m.status === 'pending').sort((a,b) => b.score - a.score);
+  const approvedMatches = db.matches.filter(m => m.status === 'approved');
+
+  let html = '';
+  if (pendingMatches.length === 0 && approvedMatches.length === 0) {
+    html = `<div class="empty-state">
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <h3>No matches yet</h3>
+      <p>Submit both lost and found reports to see AI-generated matches here.</p>
+    </div>`;
+  }
+
+  if (pendingMatches.length) {
+    html += `<div class="match-section-title">⏳ Pending Review (${pendingMatches.length})</div>`;
+    pendingMatches.forEach(m => { html += renderMatchCard(m); });
+  }
+  if (approvedMatches.length) {
+    html += `<div class="match-section-title" style="margin-top:28px;">✅ Approved Matches (${approvedMatches.length})</div>`;
+    approvedMatches.forEach(m => { html += renderMatchCard(m, true); });
+  }
+  $('tabMatches').innerHTML = html;
+
+  // Wire up buttons
+  $('tabMatches').querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.lost + ':' + btn.dataset.found;
+      const match = db.matches.find(m => m.lostId + ':' + m.foundId === key);
+      if (!match) return;
+      match.status = btn.dataset.action === 'approve' ? 'approved' : 'rejected';
+      saveDB();
+      renderAdmin();
+    });
+  });
+}
+
+function renderMatchCard(m, isApproved) {
+  const lost = db.lost.find(r => r.id === m.lostId);
+  const found = db.found.find(r => r.id === m.foundId);
+  if (!lost || !found) return '';
+
+  const scoreClass = m.score >= 60 ? 'score-high' : m.score >= 35 ? 'score-med' : 'score-low';
+  const scoreLabel = m.score >= 60 ? 'High' : m.score >= 35 ? 'Medium' : 'Low';
+
+  const photosHTML = (arr) => arr && arr.length ? `<div class="photos">${arr.map(p => `<img src="${p}" />`).join('')}</div>` : '';
+
+  return `<div class="match-card">
+    <div class="match-pair">
+      <div class="match-item lost-item">
+        <div class="tag">🔴 Lost</div>
+        <h4>${lost.subcategory}</h4>
+        <p><strong>Colour:</strong> ${lost.colour}</p>
+        <p>${lost.description}</p>
+        ${lost.idMarks ? `<p><em>Marks: ${lost.idMarks}</em></p>` : ''}
+        <div class="meta">${lost.id} · ${new Date(lost.date).toLocaleDateString()}</div>
+        ${photosHTML(lost.photos)}
+      </div>
+      <div class="match-arrow">
+        <svg viewBox="0 0 24 24"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
+        <div class="match-score ${scoreClass}">${m.score}% · ${scoreLabel}</div>
+      </div>
+      <div class="match-item found-item">
+        <div class="tag">🟢 Found</div>
+        <h4>${found.subcategory}</h4>
+        <p><strong>Colour:</strong> ${found.colour}</p>
+        <p>${found.description}</p>
+        ${found.idMarks ? `<p><em>Marks: ${found.idMarks}</em></p>` : ''}
+        <div class="meta">${found.id} · ${new Date(found.date).toLocaleDateString()}</div>
+        ${photosHTML(found.photos)}
+      </div>
+    </div>
+    ${!isApproved ? `<div class="match-actions">
+      <button class="btn btn-sm btn-red" data-action="reject" data-lost="${m.lostId}" data-found="${m.foundId}">✕ Reject</button>
+      <button class="btn btn-sm btn-green" data-action="approve" data-lost="${m.lostId}" data-found="${m.foundId}">✓ Approve Match</button>
+    </div>` : `<div style="text-align:right;margin-top:10px;"><span class="match-score score-high">✓ Approved</span></div>`}
+  </div>`;
+}
+
+function renderReportsTab(type) {
+  const items = db[type];
+  const container = type === 'lost' ? $('tabLost') : $('tabFound');
+  if (!items.length) {
+    container.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+      <h3>No ${type} reports</h3><p>Reports will appear here once submitted.</p>
+    </div>`;
+    return;
+  }
+  let html = `<div style="overflow-x:auto;"><table class="report-table"><thead><tr>
+    <th>Ref</th><th>Item</th><th>Colour</th><th>Description</th><th>Contact</th><th>Date</th>
+  </tr></thead><tbody>`;
+  items.slice().reverse().forEach(r => {
+    html += `<tr>
+      <td><strong>${r.id}</strong></td>
+      <td>${r.subcategory}<br><span style="font-size:.72rem;color:var(--gray-400);">${r.category.replace(/_/g,' ')}</span></td>
+      <td>${r.colour}</td>
+      <td style="max-width:200px;">${r.description.substring(0,80)}${r.description.length>80?'…':''}</td>
+      <td>${r.contactName || '—'}<br><span style="font-size:.75rem;color:var(--gray-400);">${r.contactEmail || ''}</span></td>
+      <td style="white-space:nowrap;">${new Date(r.date).toLocaleDateString()}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+}
+
+/* Admin tabs */
+document.querySelectorAll('.admin-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    $('tabMatches').style.display = tab.dataset.tab === 'matches' ? '' : 'none';
+    $('tabLost').style.display    = tab.dataset.tab === 'lost'    ? '' : 'none';
+    $('tabFound').style.display   = tab.dataset.tab === 'found'   ? '' : 'none';
+  });
+});
+
+/* Admin run match button */
+$('adminRunMatch').addEventListener('click', () => {
+  showLoading('We got you', 'Running AI matching algorithm…', () => {
+    runAIMatching();
+    renderAdmin();
+    // Activate matches tab
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('.admin-tab[data-tab="matches"]').classList.add('active');
+    $('tabMatches').style.display = '';
+    $('tabLost').style.display = 'none';
+    $('tabFound').style.display = 'none';
+  });
+});
+</script>
+</body>
+</html>
